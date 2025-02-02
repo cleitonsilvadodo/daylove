@@ -1,18 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
-import { FormData } from "@/types/form";
+import { FormData, MusicType } from "@/types/form";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export interface PageRecord extends Omit<FormData, "photos" | "music"> {
+export interface PageRecord {
   id: string;
+  title: string;
+  startDate: string;
+  dateDisplayMode: string;
+  message: string;
   photos: string[];
   music: {
+    type: MusicType;
     url: string;
     title: string;
   };
+  animation: FormData["animation"];
   created_at: string;
   updated_at: string;
   status: "draft" | "published" | "expired";

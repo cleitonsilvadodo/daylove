@@ -63,12 +63,25 @@ const SECURITY_FEATURES = [
   }
 ];
 
+interface CustomerData {
+  name: string;
+  email: string;
+  document: string;
+  phone: string;
+}
+
 export default function PaymentForm({
   formData,
   onPrevStep,
 }: PaymentFormProps) {
   const [selectedPlan, setSelectedPlan] = useState(PLANS[0]);
   const [loading, setLoading] = useState(false);
+  const [customerData, setCustomerData] = useState<CustomerData>({
+    name: "",
+    email: "",
+    document: "",
+    phone: "",
+  });
 
   const handlePayment = async () => {
     try {
@@ -83,6 +96,12 @@ export default function PaymentForm({
           formData,
           planType: selectedPlan.type,
           planPrice: selectedPlan.price,
+          customer: {
+            name: customerData.name,
+            email: customerData.email,
+            document_number: customerData.document.replace(/\D/g, ""),
+            phone_numbers: [customerData.phone.replace(/\D/g, "")],
+          },
         }),
       });
 
@@ -160,6 +179,59 @@ export default function PaymentForm({
         ))}
       </div>
 
+      {/* Formulário de dados do cliente */}
+      <div className="bg-[#1A1A1A] p-6 rounded-lg mb-8">
+        <h3 className="text-xl font-bold text-white mb-4">Dados para pagamento</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="name" className="label">Nome completo</label>
+            <input
+              type="text"
+              id="name"
+              value={customerData.name}
+              onChange={(e) => setCustomerData(prev => ({ ...prev, name: e.target.value }))}
+              className="input"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="email" className="label">E-mail</label>
+            <input
+              type="email"
+              id="email"
+              value={customerData.email}
+              onChange={(e) => setCustomerData(prev => ({ ...prev, email: e.target.value }))}
+              className="input"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="document" className="label">CPF</label>
+            <input
+              type="text"
+              id="document"
+              value={customerData.document}
+              onChange={(e) => setCustomerData(prev => ({ ...prev, document: e.target.value }))}
+              className="input"
+              placeholder="000.000.000-00"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="phone" className="label">Telefone</label>
+            <input
+              type="tel"
+              id="phone"
+              value={customerData.phone}
+              onChange={(e) => setCustomerData(prev => ({ ...prev, phone: e.target.value }))}
+              className="input"
+              placeholder="(00) 00000-0000"
+              required
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Security Features */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-[#1A1A1A] p-6 rounded-lg">
         {SECURITY_FEATURES.map((feature, index) => (
@@ -188,7 +260,7 @@ export default function PaymentForm({
           <button
             type="button"
             onClick={handlePayment}
-            disabled={loading}
+            disabled={loading || !customerData.name || !customerData.email || !customerData.document || !customerData.phone}
             className="btn btn-primary disabled:opacity-50"
           >
             {loading ? "Processando..." : "Pagar agora"}

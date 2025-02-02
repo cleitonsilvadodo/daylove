@@ -36,15 +36,16 @@ export async function POST(request: Request) {
       },
       customer: {
         external_id: "1",
-        name: "Cliente Teste",
-        email: "cliente@teste.com",
+        name: body.customer.name,
+        email: body.customer.email,
         country: "br",
         type: "individual",
-        document_number: "00000000000",
-        phone_numbers: ["+5500000000000"],
+        document_number: body.customer.document_number,
+        phone_numbers: body.customer.phone_numbers,
       },
     });
 
+    console.log("Transação criada:", transaction.id);
     return NextResponse.json({
       success: true,
       preferenceId: transaction.id,

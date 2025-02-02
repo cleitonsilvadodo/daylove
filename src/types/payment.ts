@@ -3,6 +3,7 @@ export interface PaymentResponse {
   preferenceId?: string;
   init_point?: string;
   error?: string;
+  details?: any;
 }
 
 export type PlanType = "forever" | "annual";
@@ -15,8 +16,16 @@ export interface Plan {
   features: string[];
 }
 
+export interface CustomerData {
+  name: string;
+  email: string;
+  document_number: string;
+  phone_numbers: string[];
+}
+
 export interface CreatePaymentRequest {
   formData: any;
   planType: PlanType;
   planPrice: number;
+  customer: CustomerData;
 }

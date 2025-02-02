@@ -6,9 +6,9 @@ export async function POST(request: Request) {
     const body: CreatePaymentRequest = await request.json();
 
     // Verificar se a chave está presente
-    const accountId = process.env.PAGARME_ACCOUNT_ID;
-    if (!accountId) {
-      console.error("ID da conta do Pagar.me não encontrado");
+    const apiKey = process.env.PAGARME_SECRET_KEY;
+    if (!apiKey) {
+      console.error("Chave da API do Pagar.me não encontrada");
       return NextResponse.json(
         { success: false, error: "Configuração inválida" },
         { status: 500 }
@@ -16,41 +16,62 @@ export async function POST(request: Request) {
     }
 
     // Criar checkout
-    const checkoutData = {
-      amount: Math.round(body.planPrice * 100),
-      paymentMethods: "credit_card",
-      maxInstallments: 1,
-      defaultInstallment: 1,
-      customer: {
-        name: body.customer.name,
-        email: body.customer.email,
-        document_number: body.customer.document_number,
-        phone_numbers: body.customer.phone_numbers,
+    const response = await fetch('https://api.pagar.me/core/v5/orders', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(apiKey).toString('base64')}`,
+        'Content-Type': 'application/json',
       },
-      items: [{
-        id: body.planType,
-        title: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
-        unit_price: Math.round(body.planPrice * 100),
-        quantity: 1,
-        tangible: false
-      }],
-      metadata: {
-        formData: JSON.stringify(body.formData),
-        planType: body.planType,
-      },
-      postbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/pagarme`,
-      successfulPaymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-      failedPaymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
-      pendingPaymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/pending`,
-    };
+      body: JSON.stringify({
+        items: [{
+          amount: Math.round(body.planPrice * 100),
+          description: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
+          quantity: 1,
+          code: body.planType,
+        }],
+        customer: {
+          name: body.customer.name,
+          email: body.customer.email,
+          document: body.customer.document_number,
+          type: 'individual',
+          phones: {
+            mobile_phone: {
+              country_code: '55',
+              number: body.customer.phone_numbers[0].replace(/\D/g, ''),
+              area_code: body.customer.phone_numbers[0].replace(/\D/g, '').substring(0, 2),
+            }
+          }
+        },
+        payments: [{
+          payment_method: 'credit_card',
+          credit_card: {
+            installments: 1,
+            statement_descriptor: 'DAYLOVE',
+          }
+        }],
+        metadata: {
+          formData: JSON.stringify(body.formData),
+          planType: body.planType,
+        },
+        antifraud_enabled: false,
+        closed: false,
+      })
+    });
 
-    // Gerar URL do checkout
-    const checkoutUrl = `https://pay.pagar.me/${accountId}/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Erro na API do Pagar.me:", data);
+      return NextResponse.json(
+        { success: false, error: data.message || "Erro ao criar pagamento" },
+        { status: response.status }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      preferenceId: "checkout",
-      init_point: checkoutUrl,
+      preferenceId: data.id,
+      init_point: data.checkouts[0].payment_url,
     });
   } catch (error: any) {
     console.error("Erro ao criar pagamento:", error);

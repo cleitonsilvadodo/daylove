@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import pagarme from "pagarme";
 import { handleSuccessfulPayment } from "@/services/pages";
 import { FormData } from "@/types/form";
 
@@ -8,35 +7,54 @@ export async function POST(request: Request) {
     const body = await request.json();
     
     // Verificar se é uma notificação válida
-    const client = await pagarme.client.connect({
-      api_key: process.env.PAGARME_SECRET_KEY || "",
+    if (!body.data || !body.data.id) {
+      console.error("Webhook inválido:", body);
+      return NextResponse.json(
+        { success: false, error: "Webhook inválido" },
+        { status: 400 }
+      );
+    }
+
+    // Buscar informações detalhadas do pedido
+    const apiKey = process.env.PAGARME_SECRET_KEY;
+    if (!apiKey) {
+      console.error("Chave da API do Pagar.me não encontrada");
+      return NextResponse.json(
+        { success: false, error: "Configuração inválida" },
+        { status: 500 }
+      );
+    }
+
+    const response = await fetch(`https://api.pagar.me/core/v5/orders/${body.data.id}`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(apiKey).toString('base64')}`,
+      },
     });
 
-    // Buscar informações detalhadas da transação
-    const transaction = await client.transactions.find({ id: body.id });
-    const status = transaction.status;
-    const metadata = transaction.metadata as {
-      formData: string;
-      planType: string;
-    };
+    const order = await response.json();
 
-    // Processar o pagamento com base no status
-    if (status === "paid" && metadata?.formData && metadata?.planType) {
+    // Verificar se o pedido foi pago
+    const charge = order.charges?.[0];
+    if (charge?.status === "paid") {
+      const metadata = order.metadata as {
+        formData: string;
+        planType: string;
+      };
+
       const formData = JSON.parse(metadata.formData) as FormData;
       const success = await handleSuccessfulPayment(
-        transaction.id,
-        transaction.customer?.email || "",
+        order.id,
+        order.customer.email,
         formData,
         metadata.planType
       );
 
       if (!success) {
         console.error("Falha ao processar pagamento aprovado:", {
-          transactionId: transaction.id,
-          email: transaction.customer?.email,
+          orderId: order.id,
+          email: order.customer.email,
         });
         
-        // Retorna 200 mesmo em caso de erro para evitar reprocessamento
         return NextResponse.json({
           success: false,
           error: "Falha ao processar pagamento"
@@ -47,11 +65,11 @@ export async function POST(request: Request) {
     }
 
     // Log para outros status
-    console.log(`Transaction ${transaction.id} status: ${status}`, {
-      metadata,
+    console.log(`Order ${order.id} status: ${charge?.status}`, {
+      metadata: order.metadata,
       customer: {
-        email: transaction.customer?.email,
-        name: transaction.customer?.name,
+        email: order.customer?.email,
+        name: order.customer?.name,
       },
     });
 

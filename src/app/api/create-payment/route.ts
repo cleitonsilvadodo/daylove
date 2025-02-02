@@ -47,6 +47,7 @@ export async function POST(request: Request) {
           credit_card: {
             installments: 1,
             statement_descriptor: 'DAYLOVE',
+            operation_type: 'auth_and_capture',
           }
         }],
         metadata: {
@@ -55,6 +56,14 @@ export async function POST(request: Request) {
         },
         antifraud_enabled: false,
         closed: false,
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+        failure_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
+        review_informations: {
+          enabled: true,
+          success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+          failure_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
+        }
       })
     });
 
@@ -71,7 +80,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       preferenceId: data.id,
-      init_point: data.checkouts[0].payment_url,
+      init_point: data.checkouts?.[0]?.payment_url || `https://checkout.pagar.me/#/order/${data.id}`,
     });
   } catch (error: any) {
     console.error("Erro ao criar pagamento:", error);

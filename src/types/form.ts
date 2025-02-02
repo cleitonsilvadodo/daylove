@@ -1,3 +1,5 @@
+export type AnimationType = "none" | "hearts" | "aurora" | "stars-meteors";
+
 export interface FormData {
   currentStep: number;
   title: string;
@@ -9,7 +11,7 @@ export interface FormData {
     url: string;
     title: string;
   };
-  animation: string;
+  animation: AnimationType;
   plan?: {
     type: "forever" | "annual";
     price: number;

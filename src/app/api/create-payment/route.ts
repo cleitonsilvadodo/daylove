@@ -29,10 +29,18 @@ export async function POST(request: Request) {
         planType: body.planType,
       },
       postbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/pagarme`,
+      merchantId: process.env.PAGARME_ACCOUNT_ID,
+      apiKey: process.env.PAGARME_SECRET_KEY,
+      companyName: "DayLove",
+      companyEmail: "cleitomdodopago@gmail.com",
+      companyPhone: "11986480349",
+      successfulPaymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+      failedPaymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
+      pendingPaymentUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/pending`,
     };
 
     // Gerar URL do checkout
-    const checkoutUrl = `https://pagar.me/checkout/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
+    const checkoutUrl = `https://checkout.pagar.me/#/checkout/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
 
     return NextResponse.json({
       success: true,

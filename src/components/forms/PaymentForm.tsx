@@ -109,13 +109,9 @@ export default function PaymentForm({
           Escolha o plano ideal para sua página personalizada. Você pode escolher entre os planos abaixo.
         </p>
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Image
-            src="/mercadopago-badge.svg"
-            alt="MercadoPago"
-            width={120}
-            height={40}
-            className="opacity-90 hover:opacity-100 transition-opacity"
-          />
+          <div className="bg-white px-4 py-2 rounded-lg opacity-90 hover:opacity-100 transition-opacity">
+            <span className="text-black font-bold">Pagar.me</span>
+          </div>
           <Image
             src="/ssl-badge.svg"
             alt="SSL Secure"
@@ -187,7 +183,7 @@ export default function PaymentForm({
         <div className="flex items-center gap-4">
           <div className="text-white/60 text-sm text-right">
             Pagamento processado por <br/>
-            <span className="text-white">MercadoPago</span>
+            <span className="text-white">Pagar.me</span>
           </div>
           <button
             type="button"

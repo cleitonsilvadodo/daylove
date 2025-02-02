@@ -1,30 +1,37 @@
 import { NextResponse } from "next/server";
-import { createPayment } from "@/services/payment";
+import pagarme from "pagarme";
 import { CreatePaymentRequest } from "@/types/payment";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as CreatePaymentRequest;
-    const { formData, planType, planPrice } = body;
+    const body: CreatePaymentRequest = await request.json();
 
-    const result = await createPayment({
-      formData,
-      planType,
-      planPrice
+    const client = await pagarme.client.connect({
+      api_key: process.env.PAGARME_SECRET_KEY || "",
     });
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Erro ao criar pagamento" },
-        { status: 400 }
-      );
-    }
+    const transaction = await client.transactions.create({
+      amount: Math.round(body.planPrice * 100), // Converte para centavos
+      payment_method: "credit_card",
+      postback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/pagarme`,
+      async: false,
+      capture: true,
+      soft_descriptor: "DAYLOVE",
+      metadata: {
+        formData: JSON.stringify(body.formData),
+        planType: body.planType,
+      },
+    });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      success: true,
+      preferenceId: transaction.id,
+      init_point: transaction.card.payment_url || "",
+    });
   } catch (error) {
-    console.error("Erro ao processar pagamento:", error);
+    console.error("Erro ao criar pagamento:", error);
     return NextResponse.json(
-      { error: "Erro interno do servidor" },
+      { success: false, error: "Erro ao criar pagamento" },
       { status: 500 }
     );
   }

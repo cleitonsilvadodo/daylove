@@ -1,12 +1,6 @@
-import { MercadoPagoConfig, Preference } from "mercadopago";
+import pagarme from 'pagarme';
 import { FormData } from "@/types/form";
 import { PaymentResponse, PlanType } from "@/types/payment";
-
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || "",
-});
-
-const preferenceClient = new Preference(client);
 
 interface CreatePaymentProps {
   formData: FormData;
@@ -16,36 +10,27 @@ interface CreatePaymentProps {
 
 export async function createPayment({ formData, planType, planPrice }: CreatePaymentProps): Promise<PaymentResponse> {
   try {
-    const preference = await preferenceClient.create({
-      body: {
-        items: [
-          {
-            id: planType,
-            title: `Plano ${planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
-            quantity: 1,
-            unit_price: planPrice,
-            currency_id: "BRL",
-          },
-        ],
-        metadata: {
-          formData,
-          planType,
-        },
-        back_urls: {
-          success: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-          failure: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
-          pending: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/pending`,
-        },
-        auto_return: "approved",
-        notification_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/mercadopago`,
-        statement_descriptor: "DAYLOVE",
-      }
+    const client = await pagarme.client.connect({
+      api_key: process.env.PAGARME_SECRET_KEY || '',
+    });
+
+    const transaction = await client.transactions.create({
+      amount: planPrice * 100, // Pagar.me trabalha com centavos
+      payment_method: 'credit_card',
+      postback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/webhooks/pagarme`,
+      async: false,
+      capture: true,
+      soft_descriptor: 'DAYLOVE',
+      metadata: {
+        formData: JSON.stringify(formData),
+        planType,
+      },
     });
 
     return {
       success: true,
-      preferenceId: preference.id,
-      init_point: preference.init_point || "",
+      preferenceId: transaction.id,
+      init_point: transaction.card.payment_url || '',
     };
   } catch (error) {
     console.error("Erro ao criar pagamento:", error);

@@ -19,8 +19,9 @@ export async function POST(request: Request) {
     const response = await fetch('https://api.pagar.me/core/v5/orders', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(apiKey).toString('base64')}`,
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         items: [{

@@ -27,9 +27,18 @@ export async function POST(request: Request) {
 
     const response = await fetch(`https://api.pagar.me/core/v5/orders/${body.data.id}`, {
       headers: {
-        'Authorization': `Basic ${Buffer.from(apiKey).toString('base64')}`,
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
     });
+
+    if (!response.ok) {
+      console.error("Erro ao buscar pedido:", await response.text());
+      return NextResponse.json(
+        { success: false, error: "Erro ao buscar pedido" },
+        { status: response.status }
+      );
+    }
 
     const order = await response.json();
 

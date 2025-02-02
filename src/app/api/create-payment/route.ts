@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     };
 
     // Gerar URL do checkout
-    const checkoutUrl = `https://checkout.pagar.me/#/checkout/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
+    const checkoutUrl = `https://pagar.me/checkout/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
 
     return NextResponse.json({
       success: true,

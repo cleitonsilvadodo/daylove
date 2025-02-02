@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FormData } from "@/types/form";
 import { PaymentResponse, PlanType } from "@/types/payment";
 import Image from "next/image";
+
+declare global {
+  interface Window {
+    PagarMeCheckout: {
+      Checkout: {
+        open: (config: any) => void;
+      };
+    };
+  }
+}
 
 interface PaymentFormProps {
   formData: FormData;
@@ -82,6 +92,18 @@ export default function PaymentForm({
     document: "",
     phone: "",
   });
+
+  useEffect(() => {
+    // Carregar script do Pagar.me
+    const script = document.createElement('script');
+    script.src = 'https://assets.pagar.me/checkout/1.1.0/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const handlePayment = async () => {
     try {

@@ -1,0 +1,204 @@
+"use client";
+
+import React, { useState } from "react";
+import { FormData } from "@/types/form";
+import { PaymentResponse, PlanType } from "@/types/payment";
+import Image from "next/image";
+
+interface PaymentFormProps {
+  formData: FormData;
+  setFormData: (data: FormData) => void;
+  onPrevStep: () => void;
+}
+
+const PLANS = [
+  {
+    type: "forever" as PlanType,
+    title: "Para sempre",
+    price: 29.90,
+    oldPrice: 62.00,
+    period: "/uma vez",
+    features: [
+      { text: "Texto dedicado", included: true },
+      { text: "Data de início", included: true },
+      { text: "Máximo de 8 imagens", included: true },
+      { text: "Com música", included: true },
+      { text: "Com animações exclusivas", included: true },
+      { text: "Acesso vitalício", included: true },
+    ],
+    recommended: true,
+  },
+  {
+    type: "annual" as PlanType,
+    title: "Anual",
+    price: 19.90,
+    oldPrice: 42.00,
+    period: "/por ano",
+    features: [
+      { text: "Texto dedicado", included: true },
+      { text: "Data de início", included: true },
+      { text: "Máximo de 4 imagens", included: true },
+      { text: "Sem música", included: false },
+      { text: "Sem animações exclusivas", included: false },
+      { text: "Renovação anual", included: true },
+    ],
+  },
+];
+
+const SECURITY_FEATURES = [
+  {
+    icon: "🔒",
+    title: "Pagamento Seguro",
+    description: "Seus dados estão protegidos com criptografia de ponta a ponta"
+  },
+  {
+    icon: "✨",
+    title: "Satisfação Garantida",
+    description: "7 dias de garantia incondicional"
+  },
+  {
+    icon: "⚡",
+    title: "Ativação Instantânea",
+    description: "Sua página fica disponível imediatamente após o pagamento"
+  }
+];
+
+export default function PaymentForm({
+  formData,
+  onPrevStep,
+}: PaymentFormProps) {
+  const [selectedPlan, setSelectedPlan] = useState(PLANS[0]);
+  const [loading, setLoading] = useState(false);
+
+  const handlePayment = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          formData,
+          planType: selectedPlan.type,
+          planPrice: selectedPlan.price,
+        }),
+      });
+
+      const data: PaymentResponse = await response.json();
+
+      if (data.success && data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        alert("Erro ao criar pagamento. Por favor, tente novamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao processar pagamento:", error);
+      alert("Erro ao processar pagamento. Por favor, tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-bold text-white mb-4">Nossos Planos</h2>
+        <p className="text-white/60 mb-6">
+          Escolha o plano ideal para sua página personalizada. Você pode escolher entre os planos abaixo.
+        </p>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <Image
+            src="/mercadopago-badge.svg"
+            alt="MercadoPago"
+            width={120}
+            height={40}
+            className="opacity-90 hover:opacity-100 transition-opacity"
+          />
+          <Image
+            src="/ssl-badge.svg"
+            alt="SSL Secure"
+            width={100}
+            height={40}
+            className="opacity-90 hover:opacity-100 transition-opacity"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {PLANS.map((plan) => (
+          <div
+            key={plan.type}
+            className={`card ${selectedPlan.type === plan.type ? 'card-selected' : 'card-default'}`}
+            onClick={() => setSelectedPlan(plan)}
+          >
+            {plan.recommended && (
+              <div className="tag-recommended">
+                Recomendado
+              </div>
+            )}
+            <h3 className="text-2xl font-bold text-white mb-2">{plan.title}</h3>
+            <div className="mb-6">
+              <span className="price-old">R$ {plan.oldPrice.toFixed(2)}</span>
+              <div className="flex items-baseline gap-1">
+                <span className="price-current">R$ {plan.price.toFixed(2)}</span>
+                <span className="price-period">{plan.period}</span>
+              </div>
+            </div>
+            <ul className="space-y-3">
+              {plan.features.map((feature, index) => (
+                <li key={index} className="flex items-center text-white/80">
+                  {feature.included ? (
+                    <span className="feature-included mr-2">✓</span>
+                  ) : (
+                    <span className="feature-excluded mr-2">✕</span>
+                  )}
+                  <span className={feature.included ? '' : 'text-white/40'}>
+                    {feature.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Security Features */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-[#1A1A1A] p-6 rounded-lg">
+        {SECURITY_FEATURES.map((feature, index) => (
+          <div key={index} className="text-center">
+            <div className="text-2xl mb-2">{feature.icon}</div>
+            <h4 className="text-white font-bold mb-1">{feature.title}</h4>
+            <p className="text-white/60 text-sm">{feature.description}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 flex justify-between items-center">
+        <button
+          type="button"
+          onClick={onPrevStep}
+          className="btn btn-secondary flex items-center gap-2"
+        >
+          <span>←</span>
+          Voltar
+        </button>
+        <div className="flex items-center gap-4">
+          <div className="text-white/60 text-sm text-right">
+            Pagamento processado por <br/>
+            <span className="text-white">MercadoPago</span>
+          </div>
+          <button
+            type="button"
+            onClick={handlePayment}
+            disabled={loading}
+            className="btn btn-primary disabled:opacity-50"
+          >
+            {loading ? "Processando..." : "Pagar agora"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

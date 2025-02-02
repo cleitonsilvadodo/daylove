@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Music } from "@/types/form";
+import { FormData } from "@/types/form";
 
 interface MusicPlayerProps {
-  music: Music;
+  music: FormData["music"];
 }
 
 export default function MusicPlayer({ music }: MusicPlayerProps) {

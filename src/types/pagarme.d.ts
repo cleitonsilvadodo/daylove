@@ -9,6 +9,15 @@ declare module 'pagarme' {
         capture?: boolean;
         soft_descriptor?: string;
         metadata?: any;
+        customer?: {
+          external_id: string;
+          name: string;
+          email: string;
+          country: string;
+          type: string;
+          document_number: string;
+          phone_numbers: string[];
+        };
       }): Promise<{
         id: string;
         card: {
@@ -31,7 +40,10 @@ declare module 'pagarme' {
 
   interface PagarmeStatic {
     client: {
-      connect(options: { api_key: string }): Promise<PagarmeClient>;
+      connect(options: { 
+        api_key: string;
+        encryption_key?: string;
+      }): Promise<PagarmeClient>;
     };
   }
 

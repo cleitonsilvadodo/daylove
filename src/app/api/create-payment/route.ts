@@ -6,10 +6,23 @@ export async function POST(request: Request) {
   try {
     const body: CreatePaymentRequest = await request.json();
 
+    // Verificar se a chave está presente
+    const apiKey = process.env.PAGARME_SECRET_KEY;
+    if (!apiKey) {
+      console.error("Chave da API do Pagar.me não encontrada");
+      return NextResponse.json(
+        { success: false, error: "Configuração inválida" },
+        { status: 500 }
+      );
+    }
+
+    console.log("Conectando ao Pagar.me...");
     const client = await pagarme.client.connect({
-      api_key: process.env.PAGARME_SECRET_KEY || "",
+      api_key: apiKey,
+      encryption_key: process.env.PAGARME_PUBLIC_KEY,
     });
 
+    console.log("Criando transação...");
     const transaction = await client.transactions.create({
       amount: Math.round(body.planPrice * 100), // Converte para centavos
       payment_method: "credit_card",
@@ -21,6 +34,15 @@ export async function POST(request: Request) {
         formData: JSON.stringify(body.formData),
         planType: body.planType,
       },
+      customer: {
+        external_id: "1",
+        name: "Cliente Teste",
+        email: "cliente@teste.com",
+        country: "br",
+        type: "individual",
+        document_number: "00000000000",
+        phone_numbers: ["+5500000000000"],
+      },
     });
 
     return NextResponse.json({
@@ -28,10 +50,15 @@ export async function POST(request: Request) {
       preferenceId: transaction.id,
       init_point: transaction.card.payment_url || "",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao criar pagamento:", error);
+    console.error("Detalhes do erro:", error.response?.errors || error.message);
     return NextResponse.json(
-      { success: false, error: "Erro ao criar pagamento" },
+      { 
+        success: false, 
+        error: "Erro ao criar pagamento",
+        details: error.response?.errors || error.message
+      },
       { status: 500 }
     );
   }

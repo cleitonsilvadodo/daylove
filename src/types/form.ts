@@ -1,5 +1,7 @@
 export type AnimationType = "none" | "hearts" | "aurora" | "stars-meteors";
 
+export type MusicType = "file" | "youtube" | "spotify" | "";
+
 export interface FormData {
   currentStep: number;
   title: string;
@@ -8,6 +10,7 @@ export interface FormData {
   message: string;
   photos: string[];
   music: {
+    type: MusicType;
     url: string;
     title: string;
   };
@@ -28,6 +31,7 @@ export const initialFormData: FormData = {
   message: "",
   photos: [],
   music: {
+    type: "",
     url: "",
     title: "",
   },

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Criar checkout
-    const response = await fetch('https://api.pagar.me/core/v5/orders', {
+    const response = await fetch('https://api.pagar.me/core/v5/checkouts', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -24,12 +24,19 @@ export async function POST(request: Request) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        items: [{
-          amount: Math.round(body.planPrice * 100),
-          description: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
-          quantity: 1,
-          code: body.planType,
-        }],
+        accepted_payment_methods: ['credit_card'],
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+        failure_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
+        expires_in: 30, // minutos
+        billing_address_editable: false,
+        customer_editable: false,
+        skip_checkout_success_page: true,
+        payment_config: {
+          credit_card: {
+            capture: true,
+            statement_descriptor: 'DAYLOVE',
+          }
+        },
         customer: {
           name: body.customer.name,
           email: body.customer.email,
@@ -43,28 +50,16 @@ export async function POST(request: Request) {
             }
           }
         },
-        payments: [{
-          payment_method: 'credit_card',
-          credit_card: {
-            installments: 1,
-            statement_descriptor: 'DAYLOVE',
-            operation_type: 'auth_and_capture',
-          }
+        items: [{
+          amount: Math.round(body.planPrice * 100),
+          description: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
+          quantity: 1,
+          code: body.planType,
         }],
         metadata: {
           formData: JSON.stringify(body.formData),
           planType: body.planType,
         },
-        antifraud_enabled: false,
-        closed: false,
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-        failure_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
-        review_informations: {
-          enabled: true,
-          success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-          failure_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
-        }
       })
     });
 
@@ -81,7 +76,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       preferenceId: data.id,
-      init_point: data.checkouts?.[0]?.payment_url || `https://checkout.pagar.me/#/order/${data.id}`,
+      init_point: data.url,
     });
   } catch (error: any) {
     console.error("Erro ao criar pagamento:", error);

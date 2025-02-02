@@ -1,30 +1,21 @@
 import { NextResponse } from "next/server";
-import pagarme from "pagarme";
 import { CreatePaymentRequest } from "@/types/payment";
 
 export async function POST(request: Request) {
   try {
     const body: CreatePaymentRequest = await request.json();
 
-    // Verificar se a chave está presente
-    const apiKey = process.env.PAGARME_SECRET_KEY;
-    if (!apiKey) {
-      console.error("Chave da API do Pagar.me não encontrada");
-      return NextResponse.json(
-        { success: false, error: "Configuração inválida" },
-        { status: 500 }
-      );
-    }
-
     // Criar checkout transparente
     const checkoutData = {
+      encryption_key: process.env.PAGARME_PUBLIC_KEY,
       amount: Math.round(body.planPrice * 100),
-      title: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
-      description: "Página dedicatória personalizada",
+      createToken: "false",
       customerData: "true",
       paymentMethods: "credit_card",
       maxInstallments: 1,
       defaultInstallment: 1,
+      uiColor: "#ef4444",
+      headerText: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
       customerName: body.customer.name,
       customerEmail: body.customer.email,
       customerDocumentNumber: body.customer.document_number,
@@ -41,7 +32,7 @@ export async function POST(request: Request) {
     };
 
     // Gerar URL do checkout
-    const checkoutUrl = `https://checkout.pagar.me/#/identifier/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
+    const checkoutUrl = `https://checkout.pagar.me/#/checkout/${Buffer.from(JSON.stringify(checkoutData)).toString('base64')}`;
 
     return NextResponse.json({
       success: true,

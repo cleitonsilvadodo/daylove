@@ -50,7 +50,7 @@ export default function TitleForm({
         ))}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
           <label htmlFor="title" className="label">
             Título da página
@@ -88,7 +88,7 @@ export default function TitleForm({
                     title: suggestion
                   }));
                 }}
-                className="px-3 py-1 bg-[#1A1A1A] border border-[#333333] rounded-lg text-white text-sm hover:border-red-500"
+                className="px-4 py-2 bg-[#1A1A1A] border border-[#333333] rounded-lg text-white hover:border-red-500 transition-all duration-300"
               >
                 {suggestion}
               </button>

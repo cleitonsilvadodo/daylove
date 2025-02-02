@@ -108,13 +108,8 @@ export default function PaymentForm({
       const data: PaymentResponse = await response.json();
 
       if (data.success && data.init_point) {
-        // Abrir o checkout em uma nova janela
-        const checkoutWindow = window.open(data.init_point, 'PagarMeCheckout', 'width=800,height=600');
-        
-        // Verificar se a janela foi bloqueada
-        if (!checkoutWindow || checkoutWindow.closed || typeof checkoutWindow.closed === 'undefined') {
-          alert("Por favor, permita popups para continuar com o pagamento.");
-        }
+        // Abrir o checkout em uma nova aba
+        window.open(data.init_point, '_blank');
       } else {
         alert("Erro ao criar pagamento. Por favor, tente novamente.");
       }

@@ -165,10 +165,11 @@ export async function handleSuccessfulPayment(
     if (!pageData) throw new Error("Falha ao criar página");
 
     // 2. Atualizar com informações do pagamento
-    const updatedPage = await updatePage(pageData.id, {
+    const updatedPage = await updateSupabasePage(pageData.id, {
       payment_id: paymentId,
       user_email: userEmail,
       plan_type: planType,
+      status: "draft"
     });
     if (!updatedPage) throw new Error("Falha ao atualizar página");
 

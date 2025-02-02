@@ -1,19 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FormData } from "@/types/form";
 import { PaymentResponse, PlanType } from "@/types/payment";
 import Image from "next/image";
-
-declare global {
-  interface Window {
-    PagarMeCheckout: {
-      Checkout: {
-        open: (config: any) => void;
-      };
-    };
-  }
-}
 
 interface PaymentFormProps {
   formData: FormData;
@@ -93,18 +83,6 @@ export default function PaymentForm({
     phone: "",
   });
 
-  useEffect(() => {
-    // Carregar script do Pagar.me
-    const script = document.createElement('script');
-    script.src = 'https://assets.pagar.me/checkout/1.1.0/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   const handlePayment = async () => {
     try {
       setLoading(true);
@@ -130,7 +108,13 @@ export default function PaymentForm({
       const data: PaymentResponse = await response.json();
 
       if (data.success && data.init_point) {
-        window.location.href = data.init_point;
+        // Abrir o checkout em uma nova janela
+        const checkoutWindow = window.open(data.init_point, 'PagarMeCheckout', 'width=800,height=600');
+        
+        // Verificar se a janela foi bloqueada
+        if (!checkoutWindow || checkoutWindow.closed || typeof checkoutWindow.closed === 'undefined') {
+          alert("Por favor, permita popups para continuar com o pagamento.");
+        }
       } else {
         alert("Erro ao criar pagamento. Por favor, tente novamente.");
       }

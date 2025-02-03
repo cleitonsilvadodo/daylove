@@ -1,10 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function PaymentPendingPage() {
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen bg-[#111111] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-red-500 mx-auto mb-4"></div>
+        <p className="text-white/60">Carregando pagamento...</p>
+      </div>
+    </div>
+  );
+}
+
+function PaymentPendingContent() {
   const searchParams = useSearchParams();
   const [qrCodeImage, setQrCodeImage] = useState<string>();
   const [pixKey, setPixKey] = useState<string>();
@@ -188,5 +199,13 @@ export default function PaymentPendingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentPendingPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PaymentPendingContent />
+    </Suspense>
   );
 }

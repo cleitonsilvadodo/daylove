@@ -1,21 +1,39 @@
 import { NextResponse } from "next/server";
 import { handleSuccessfulPayment } from "@/services/pages";
 import { FormData } from "@/types/form";
+import { PagarmeWebhook, PagarmeOrder } from "@/types/pagarme";
+import crypto from 'crypto';
+
+const verifySignature = (body: string, signature: string): boolean => {
+  const hash = crypto.createHmac('sha256', process.env.PAGARME_SECRET_KEY || '')
+    .update(body)
+    .digest('hex');
+  return hash === signature;
+};
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.text();
+    const signature = request.headers.get('X-Hub-Signature');
+
+    if (!signature || !verifySignature(body, signature)) {
+      console.error("Assinatura do webhook inválida");
+      return NextResponse.json(
+        { success: false, error: "Assinatura inválida" },
+        { status: 401 }
+      );
+    }
+
+    const webhookData = JSON.parse(body) as PagarmeWebhook;
     
-    // Verificar se é uma notificação válida
-    if (!body.data || !body.data.id) {
-      console.error("Webhook inválido:", body);
+    if (!webhookData.data || !webhookData.data.id) {
+      console.error("Webhook inválido:", webhookData);
       return NextResponse.json(
         { success: false, error: "Webhook inválido" },
         { status: 400 }
       );
     }
 
-    // Buscar informações detalhadas do pedido
     const apiKey = process.env.PAGARME_SECRET_KEY;
     if (!apiKey) {
       console.error("Chave da API do Pagar.me não encontrada");
@@ -25,7 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await fetch(`https://api.pagar.me/core/v5/orders/${body.data.id}`, {
+    const response = await fetch(`https://api.pagar.me/core/v5/orders/${webhookData.data.id}`, {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
@@ -33,16 +51,16 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      console.error("Erro ao buscar pedido:", await response.text());
+      const errorText = await response.text();
+      console.error("Erro ao buscar pedido:", errorText);
       return NextResponse.json(
         { success: false, error: "Erro ao buscar pedido" },
         { status: response.status }
       );
     }
 
-    const order = await response.json();
+    const order = await response.json() as PagarmeOrder;
 
-    // Verificar se o pedido foi pago
     const charge = order.charges?.[0];
     if (charge?.status === "paid") {
       const metadata = order.metadata as {
@@ -53,7 +71,7 @@ export async function POST(request: Request) {
       const formData = JSON.parse(metadata.formData) as FormData;
       const success = await handleSuccessfulPayment(
         order.id,
-        order.customer.email,
+        order.customer?.email || '',
         formData,
         metadata.planType
       );
@@ -61,7 +79,7 @@ export async function POST(request: Request) {
       if (!success) {
         console.error("Falha ao processar pagamento aprovado:", {
           orderId: order.id,
-          email: order.customer.email,
+          email: order.customer?.email,
         });
         
         return NextResponse.json({
@@ -73,7 +91,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    // Log para outros status
     console.log(`Order ${order.id} status: ${charge?.status}`, {
       metadata: order.metadata,
       customer: {

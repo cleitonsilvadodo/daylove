@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { FormData } from "@/types/form";
-import { PaymentResponse, PlanType } from "@/types/payment";
+import { PaymentResponse, PlanType, PaymentMethod } from "@/types/payment";
 import Image from "next/image";
 
 interface PaymentFormProps {
@@ -45,6 +45,21 @@ const PLANS = [
   },
 ];
 
+const PAYMENT_METHODS = [
+  {
+    id: "credit_card" as PaymentMethod,
+    title: "Cartão de Crédito",
+    icon: "💳",
+    description: "Pagamento em até 12x",
+  },
+  {
+    id: "pix" as PaymentMethod,
+    title: "PIX",
+    icon: "⚡",
+    description: "Aprovação imediata",
+  },
+];
+
 const SECURITY_FEATURES = [
   {
     icon: "🔒",
@@ -70,11 +85,27 @@ interface CustomerData {
   phone: string;
 }
 
+interface CardData {
+  number: string;
+  holder_name: string;
+  exp_month: string;
+  exp_year: string;
+  cvv: string;
+}
+
+interface PixData {
+  qr_code?: string;
+  qr_code_url?: string;
+  pix_key?: string;
+  expires_at?: string;
+}
+
 export default function PaymentForm({
   formData,
   onPrevStep,
 }: PaymentFormProps) {
   const [selectedPlan, setSelectedPlan] = useState(PLANS[0]);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("credit_card");
   const [loading, setLoading] = useState(false);
   const [customerData, setCustomerData] = useState<CustomerData>({
     name: "",
@@ -82,36 +113,67 @@ export default function PaymentForm({
     document: "",
     phone: "",
   });
+  const [cardData, setCardData] = useState<CardData>({
+    number: "",
+    holder_name: "",
+    exp_month: "",
+    exp_year: "",
+    cvv: "",
+  });
+  const [pixData, setPixData] = useState<PixData>();
 
   const handlePayment = async () => {
     try {
       setLoading(true);
+      setPixData(undefined);
+
+      const paymentData: any = {
+        formData,
+        planType: selectedPlan.type,
+        planPrice: selectedPlan.price,
+        paymentMethod: selectedMethod,
+        customer: {
+          name: customerData.name,
+          email: customerData.email,
+          document_number: customerData.document.replace(/\D/g, ""),
+          phone_numbers: [customerData.phone.replace(/\D/g, "")],
+        },
+      };
+
+      if (selectedMethod === "credit_card") {
+        paymentData.card = {
+          number: cardData.number.replace(/\s/g, ""),
+          holder_name: cardData.holder_name,
+          exp_month: parseInt(cardData.exp_month),
+          exp_year: parseInt(cardData.exp_year),
+          cvv: cardData.cvv,
+        };
+      }
 
       const response = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          formData,
-          planType: selectedPlan.type,
-          planPrice: selectedPlan.price,
-          customer: {
-            name: customerData.name,
-            email: customerData.email,
-            document_number: customerData.document.replace(/\D/g, ""),
-            phone_numbers: [customerData.phone.replace(/\D/g, "")],
-          },
-        }),
+        body: JSON.stringify(paymentData),
       });
 
       const data: PaymentResponse = await response.json();
 
-      if (data.success && data.init_point) {
-        // Abrir o checkout em uma nova aba
-        window.open(data.init_point, '_blank');
+      if (data.success) {
+        if (selectedMethod === "pix") {
+          setPixData({
+            qr_code: data.qr_code,
+            qr_code_url: data.qr_code_url,
+            pix_key: data.pix_key,
+            expires_at: data.expires_at,
+          });
+        } else if (data.init_point) {
+          window.open(data.init_point, '_blank');
+        }
       } else {
-        alert("Erro ao criar pagamento. Por favor, tente novamente.");
+        console.error("Erro na API:", data);
+        alert(data.error || "Erro ao criar pagamento. Por favor, tente novamente.");
       }
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
@@ -119,6 +181,22 @@ export default function PaymentForm({
     } finally {
       setLoading(false);
     }
+  };
+
+  const isFormValid = () => {
+    if (!customerData.name || !customerData.email || !customerData.document || !customerData.phone) {
+      return false;
+    }
+    if (selectedMethod === "credit_card") {
+      return (
+        cardData.number &&
+        cardData.holder_name &&
+        cardData.exp_month &&
+        cardData.exp_year &&
+        cardData.cvv
+      );
+    }
+    return true;
   };
 
   return (
@@ -180,6 +258,32 @@ export default function PaymentForm({
         ))}
       </div>
 
+      {/* Métodos de Pagamento */}
+      <div className="bg-[#1A1A1A] p-6 rounded-lg mb-8">
+        <h3 className="text-xl font-bold text-white mb-4">Forma de Pagamento</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {PAYMENT_METHODS.map((method) => (
+            <div
+              key={method.id}
+              className={`p-4 rounded-lg cursor-pointer transition-all ${
+                selectedMethod === method.id
+                  ? 'bg-white/10 border-2 border-white'
+                  : 'bg-black/20 border-2 border-transparent hover:bg-white/5'
+              }`}
+              onClick={() => setSelectedMethod(method.id)}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{method.icon}</span>
+                <div>
+                  <h4 className="font-bold text-white">{method.title}</h4>
+                  <p className="text-sm text-white/60">{method.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Formulário de dados do cliente */}
       <div className="bg-[#1A1A1A] p-6 rounded-lg mb-8">
         <h3 className="text-xl font-bold text-white mb-4">Dados para pagamento</h3>
@@ -233,6 +337,102 @@ export default function PaymentForm({
         </div>
       </div>
 
+      {/* Formulário de dados do cartão de crédito */}
+      {selectedMethod === "credit_card" && (
+        <div className="bg-[#1A1A1A] p-6 rounded-lg mb-8">
+          <h3 className="text-xl font-bold text-white mb-4">Dados do Cartão de Crédito</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="card_number" className="label">Número do Cartão</label>
+              <input
+                type="text"
+                id="card_number"
+                value={cardData.number}
+                onChange={(e) => setCardData(prev => ({ ...prev, number: e.target.value }))}
+                className="input"
+                placeholder="0000 0000 0000 0000"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="card_holder_name" className="label">Nome no Cartão</label>
+              <input
+                type="text"
+                id="card_holder_name"
+                value={cardData.holder_name}
+                onChange={(e) => setCardData(prev => ({ ...prev, holder_name: e.target.value }))}
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="card_expiration" className="label">Data de Expiração</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="card_exp_month"
+                  value={cardData.exp_month}
+                  onChange={(e) => setCardData(prev => ({ ...prev, exp_month: e.target.value }))}
+                  className="input w-1/2"
+                  placeholder="MM"
+                  required
+                />
+                <input
+                  type="text"
+                  id="card_exp_year"
+                  value={cardData.exp_year}
+                  onChange={(e) => setCardData(prev => ({ ...prev, exp_year: e.target.value }))}
+                  className="input w-1/2"
+                  placeholder="AAAA"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="card_cvv" className="label">CVV</label>
+              <input
+                type="text"
+                id="card_cvv"
+                value={cardData.cvv}
+                onChange={(e) => setCardData(prev => ({ ...prev, cvv: e.target.value }))}
+                className="input"
+                placeholder="123"
+                required
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code do PIX */}
+      {pixData?.qr_code && (
+        <div className="bg-[#1A1A1A] p-6 rounded-lg mb-8 text-center">
+          <h3 className="text-xl font-bold text-white mb-4">Pagamento via PIX</h3>
+          <div className="flex flex-col items-center gap-4">
+            <Image
+              src={`data:image/png;base64,${pixData.qr_code}`}
+              alt="QR Code PIX"
+              width={200}
+              height={200}
+              className="bg-white p-2 rounded-lg"
+            />
+            {pixData.pix_key && (
+              <div className="max-w-sm">
+                <p className="text-white/60 mb-2">Ou copie a chave PIX:</p>
+                <div className="bg-white/10 p-2 rounded break-all">
+                  <code className="text-white">{pixData.pix_key}</code>
+                </div>
+              </div>
+            )}
+            {pixData.expires_at && (
+              <p className="text-white/60">
+                Expira em: {new Date(pixData.expires_at).toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Security Features */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-[#1A1A1A] p-6 rounded-lg">
         {SECURITY_FEATURES.map((feature, index) => (
@@ -261,7 +461,7 @@ export default function PaymentForm({
           <button
             type="button"
             onClick={handlePayment}
-            disabled={loading || !customerData.name || !customerData.email || !customerData.document || !customerData.phone}
+            disabled={loading || !isFormValid()}
             className="btn btn-primary disabled:opacity-50"
           >
             {loading ? "Processando..." : "Pagar agora"}

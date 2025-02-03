@@ -21,6 +21,9 @@ export interface FormData {
   };
   payment_id?: string;
   user_email?: string;
+  name?: string;
+  email?: string;
+  document?: string;
 }
 
 export const initialFormData: FormData = {

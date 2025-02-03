@@ -15,52 +15,72 @@ export async function POST(request: Request) {
       );
     }
 
-    // Criar checkout
-    const response = await fetch('https://api.pagar.me/core/v5/checkouts', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        accepted_payment_methods: ['credit_card'],
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-        failure_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failure`,
-        expires_in: 30, // minutos
-        billing_address_editable: false,
-        customer_editable: false,
-        skip_checkout_success_page: true,
-        payment_config: {
-          credit_card: {
-            capture: true,
-            statement_descriptor: 'DAYLOVE',
-          }
-        },
-        customer: {
-          name: body.customer.name,
-          email: body.customer.email,
-          document: body.customer.document_number,
-          type: 'individual',
-          phones: {
-            mobile_phone: {
-              country_code: '55',
-              number: body.customer.phone_numbers[0].replace(/\D/g, ''),
-              area_code: body.customer.phone_numbers[0].replace(/\D/g, '').substring(0, 2),
-            }
-          }
-        },
-        items: [{
+    // Validar dados do cartão para pagamento com cartão de crédito
+    if (body.paymentMethod === 'credit_card' && !body.card) {
+      return NextResponse.json(
+        { success: false, error: "Dados do cartão de crédito são obrigatórios para pagamento com cartão" },
+        { status: 400 }
+      );
+    }
+
+    // Dados base do pedido
+    const orderData = {
+      items: [
+        {
           amount: Math.round(body.planPrice * 100),
-          description: `Plano ${body.planType === "forever" ? "Para Sempre" : "Anual"} - DayLove`,
+          description: `Plano ${body.planType}`,
           quantity: 1,
           code: body.planType,
-        }],
-        metadata: {
-          formData: JSON.stringify(body.formData),
-          planType: body.planType,
         },
-      })
+      ],
+      customer: {
+        name: body.customer.name,
+        email: body.customer.email,
+        type: 'individual',
+        document: body.customer.document_number.replace(/\D/g, ""),
+        phones: {
+          mobile_phone: {
+            country_code: '55',
+            area_code: body.customer.phone_numbers[0].slice(0, 2),
+            number: body.customer.phone_numbers[0].slice(2).replace(/\D/g, ""),
+          },
+        },
+        external_id: body.customer.email,
+      },
+      payments: [
+        {
+          payment_method: body.paymentMethod,
+          credit_card: body.paymentMethod === 'credit_card' && body.card ? {
+            installments: 1,
+            statement_descriptor: 'DAYLOVE',
+            card: {
+              number: body.card.number,
+              holder_name: body.card.holder_name,
+              exp_month: body.card.exp_month,
+              exp_year: body.card.exp_year,
+              cvv: body.card.cvv,
+            },
+          } : undefined,
+          pix: body.paymentMethod === 'pix' ? {
+            expires_in: 3600,
+          } : undefined,
+        },
+      ],
+      metadata: {
+        formData: JSON.stringify(body.formData),
+        planType: body.planType,
+      },
+    };
+
+    // Criar pedido
+    console.log("Criando pedido:", JSON.stringify(orderData, null, 2));
+    const response = await fetch("https://api.pagar.me/core/v5/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${Buffer.from(apiKey + ':').toString('base64')}`,
+      },
+      body: JSON.stringify(orderData),
     });
 
     const data = await response.json();
@@ -73,10 +93,24 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log("Resposta da API do Pagar.me:", JSON.stringify(data, null, 2));
+
+    // Retornar dados específicos dependendo do método de pagamento
+    if (body.paymentMethod === "pix") {
+      return NextResponse.json({
+        success: true,
+        preferenceId: data.id,
+        qr_code: data.charges[0]?.last_transaction?.qr_code,
+        qr_code_url: data.charges[0]?.last_transaction?.qr_code_url,
+        pix_key: data.charges[0]?.last_transaction?.pix_key,
+        expires_at: data.charges[0]?.last_transaction?.expires_at,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       preferenceId: data.id,
-      init_point: data.url,
+      init_point: data.charges[0]?.last_transaction?.url,
     });
   } catch (error: any) {
     console.error("Erro ao criar pagamento:", error);

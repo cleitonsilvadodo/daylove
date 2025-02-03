@@ -17,6 +17,7 @@ export default function Page({ params }: PageProps) {
   const [pageData, setPageData] = React.useState<PageRecord | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0);
 
   React.useEffect(() => {
     async function loadPage() {
@@ -39,6 +40,30 @@ export default function Page({ params }: PageProps) {
 
     loadPage();
   }, [params.id]);
+
+  // Função para avançar para a próxima foto
+  const nextPhoto = () => {
+    if (pageData?.photos && pageData.photos.length > 0) {
+      setCurrentPhotoIndex((prev) => (prev + 1) % pageData.photos.length);
+    }
+  };
+
+  // Função para voltar para a foto anterior
+  const prevPhoto = () => {
+    if (pageData?.photos && pageData.photos.length > 0) {
+      setCurrentPhotoIndex((prev) => 
+        prev === 0 ? pageData.photos.length - 1 : prev - 1
+      );
+    }
+  };
+
+  // Avançar foto automaticamente a cada 5 segundos
+  React.useEffect(() => {
+    if (pageData?.photos && pageData.photos.length > 1) {
+      const timer = setInterval(nextPhoto, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [pageData?.photos]);
 
   if (loading) {
     return (
@@ -64,23 +89,60 @@ export default function Page({ params }: PageProps) {
     );
   }
 
+  // Verificar funcionalidades baseadas no plano
+  const showMusic = pageData.plan_type === "forever";
+  const showAnimation = pageData.plan_type === "forever";
+  const hasMultiplePhotos = pageData.photos && pageData.photos.length > 1;
+
   return (
     <div className="min-h-screen bg-[#111111] py-8">
       <div className="container mx-auto px-4">
         <div className="relative w-full min-h-[400px] bg-[#111111] rounded-lg overflow-hidden">
           {/* Animação de fundo */}
-          <BackgroundAnimation type={pageData.animation} />
+          {showAnimation && <BackgroundAnimation type={pageData.animation} />}
 
           {/* Conteúdo */}
           <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 text-center">
-            {/* Foto */}
-            {pageData.photos?.[0] && (
-              <div className="relative w-64 h-64 mb-8 rounded-lg overflow-hidden">
+            {/* Foto com carrossel */}
+            {pageData.photos && pageData.photos.length > 0 && (
+              <div className="relative w-64 h-64 mb-8 rounded-lg overflow-hidden group">
                 <img
-                  src={pageData.photos[0]}
-                  alt="Foto do casal"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  src={pageData.photos[currentPhotoIndex]}
+                  alt={`Foto ${currentPhotoIndex + 1}`}
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
                 />
+                
+                {/* Botões de navegação (visíveis apenas quando hover e mais de uma foto) */}
+                {hasMultiplePhotos && (
+                  <>
+                    <button
+                      onClick={prevPhoto}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={nextPhoto}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    >
+                      →
+                    </button>
+                  </>
+                )}
+
+                {/* Indicadores de foto */}
+                {hasMultiplePhotos && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                    {pageData.photos.map((_, index) => (
+                      <div
+                        key={index}
+                        className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                          index === currentPhotoIndex ? "bg-white" : "bg-white/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -103,21 +165,21 @@ export default function Page({ params }: PageProps) {
             )}
 
             {/* Data e Contagem */}
-            {pageData.startDate && (
+            {pageData.start_date && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <p className="text-white/60">Compartilhando momentos há</p>
-                  <TimeCounter startDate={pageData.startDate} />
+                  <TimeCounter startDate={pageData.start_date} />
                 </div>
                 <div className="text-white/80">
                   <span className="text-white/60 mr-2">Desde</span>
-                  {formatDate(pageData.startDate, pageData.dateDisplayMode)}
+                  {formatDate(pageData.start_date, pageData.date_display_mode)}
                 </div>
               </div>
             )}
 
             {/* Player de música */}
-            {pageData.music.url && (
+            {showMusic && pageData.music.url && (
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
                 <MusicPlayer music={pageData.music} />
               </div>

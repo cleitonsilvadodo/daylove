@@ -18,7 +18,7 @@ const testEmail = async () => {
 
     console.log('Payload:', JSON.stringify(payload, null, 2));
 
-    const response = await fetch('http://localhost:3004/api/send-email', {
+    const response = await fetch('http://localhost:3000/api/send-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

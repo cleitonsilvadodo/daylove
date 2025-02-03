@@ -12,6 +12,34 @@ interface PreviewProps {
 }
 
 export default function Preview({ formData }: PreviewProps) {
+  const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0);
+
+  // Função para avançar para a próxima foto
+  const nextPhoto = () => {
+    if (formData.photos?.length) {
+      setCurrentPhotoIndex((prev) => (prev + 1) % formData.photos.length);
+    }
+  };
+
+  // Função para voltar para a foto anterior
+  const prevPhoto = () => {
+    if (formData.photos?.length) {
+      setCurrentPhotoIndex((prev) => 
+        prev === 0 ? formData.photos.length - 1 : prev - 1
+      );
+    }
+  };
+
+  // Avançar foto automaticamente a cada 5 segundos
+  React.useEffect(() => {
+    if (formData.photos && formData.photos.length > 1) {
+      const timer = setInterval(nextPhoto, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [formData.photos]);
+
+  const hasMultiplePhotos = formData.photos && formData.photos.length > 1;
+
   return (
     <div className="relative w-full min-h-[400px] bg-[#171717] rounded-lg overflow-hidden">
       {/* Animação de fundo */}
@@ -19,14 +47,46 @@ export default function Preview({ formData }: PreviewProps) {
 
       {/* Conteúdo */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 text-center">
-        {/* Foto */}
-        {formData.photos?.[0] && (
-          <div className="relative w-64 h-64 mb-8 rounded-lg overflow-hidden">
+        {/* Foto com carrossel */}
+        {formData.photos && formData.photos.length > 0 && (
+          <div className="relative w-64 h-64 mb-8 rounded-lg overflow-hidden group">
             <img
-              src={formData.photos[0]}
-              alt="Foto do casal"
-              className="absolute inset-0 w-full h-full object-cover"
+              src={formData.photos[currentPhotoIndex]}
+              alt={`Foto ${currentPhotoIndex + 1}`}
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
             />
+            
+            {/* Botões de navegação (visíveis apenas quando hover e mais de uma foto) */}
+            {hasMultiplePhotos && (
+              <>
+                <button
+                  onClick={prevPhoto}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={nextPhoto}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                >
+                  →
+                </button>
+              </>
+            )}
+
+            {/* Indicadores de foto */}
+            {hasMultiplePhotos && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {formData.photos.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                      index === currentPhotoIndex ? "bg-white" : "bg-white/50"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

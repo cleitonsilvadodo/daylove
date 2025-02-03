@@ -9,6 +9,7 @@ import {
   deleteFile,
   PageRecord,
 } from "@/lib/supabase";
+import { sendPageCreatedEmail } from "./email";
 
 export async function createPage(formData: FormData): Promise<PageRecord | null> {
   try {
@@ -53,14 +54,45 @@ export async function createPage(formData: FormData): Promise<PageRecord | null>
       }
     }
 
-    // 3. Criar página
-    const pageData = await createSupabasePage({
-      ...formData,
+    // 3. Validar dados obrigatórios
+    if (!formData.startDate) {
+      throw new Error("Data de início é obrigatória");
+    }
+    if (!formData.dateDisplayMode) {
+      throw new Error("Modo de exibição da data é obrigatório");
+    }
+
+    // 4. Criar página
+    const pageData = {
+      title: formData.title,
+      message: formData.message,
+      start_date: formData.startDate,
+      date_display_mode: formData.dateDisplayMode,
+      animation: formData.animation,
       photos: photoUrls,
       music: musicData,
-    });
+      status: "draft",
+    };
 
-    return pageData;
+    console.log("Dados formatados para inserção:", pageData);
+
+    const { data, error } = await supabase
+      .from("pages")
+      .insert([pageData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erro do Supabase ao criar página:", error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error("Nenhum dado retornado ao criar página");
+    }
+
+    console.log("Página criada com sucesso:", data);
+    return data;
   } catch (error) {
     console.error("Erro ao criar página:", error);
     return null;
@@ -75,7 +107,13 @@ export async function updatePage(
     const currentPage = await getPageById(id);
     if (!currentPage) throw new Error("Página não encontrada");
 
-    const updatedData: Partial<PageRecord> = { ...updates };
+    const updatedData: Partial<PageRecord> = {
+      title: updates.title,
+      message: updates.message,
+      start_date: updates.startDate,
+      date_display_mode: updates.dateDisplayMode,
+      animation: updates.animation,
+    };
 
     // 1. Atualizar fotos
     if (updates.photos) {
@@ -160,22 +198,38 @@ export async function handleSuccessfulPayment(
   planType: string
 ): Promise<boolean> {
   try {
-    // 1. Criar a página
-    const pageData = await createPage(formData);
+    // 1. Limpar funcionalidades baseadas no plano
+    const cleanedFormData = { ...formData };
+    if (planType === "annual") {
+      // Plano anual não tem música nem animação
+      cleanedFormData.music = { type: "", url: "", title: "" };
+      cleanedFormData.animation = "none";
+      console.log("Plano anual: removendo música e animação");
+    }
+
+    // 2. Criar a página
+    const pageData = await createPage(cleanedFormData);
     if (!pageData) throw new Error("Falha ao criar página");
 
-    // 2. Atualizar com informações do pagamento
+    // 3. Atualizar com informações do pagamento
     const updatedPage = await updateSupabasePage(pageData.id, {
-      payment_id: paymentId,
+      payment_id: pageData.id, // Usar o ID da página como payment_id
       user_email: userEmail,
       plan_type: planType,
       status: "draft"
-    });
+    } as Partial<PageRecord>);
     if (!updatedPage) throw new Error("Falha ao atualizar página");
 
-    // 3. Publicar a página
+    // 4. Publicar a página
     const published = await publishPage(pageData.id);
     if (!published) throw new Error("Falha ao publicar página");
+
+    // 5. Enviar email com o ID correto da página
+    await sendPageCreatedEmail({
+      ...cleanedFormData,
+      payment_id: pageData.id, // Usar o ID da página
+      user_email: userEmail
+    });
 
     return true;
   } catch (error) {

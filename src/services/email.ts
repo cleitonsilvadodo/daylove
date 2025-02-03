@@ -10,7 +10,21 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  ...(process.env.NODE_ENV === 'development' && {
+    logger: true,
+    debug: true
+  })
 });
+
+// Verificar configuração em desenvolvimento
+if (process.env.NODE_ENV === 'development') {
+  console.log('Configurações de email:', {
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_PORT === "465",
+    user: process.env.EMAIL_USER
+  });
+}
 
 // Template para email de confirmação de pagamento
 const getPaymentSuccessTemplate = (data: FormData) => `
@@ -78,12 +92,14 @@ export async function sendPaymentConfirmationEmail(data: FormData) {
   if (!data.user_email) return;
 
   try {
-    await transporter.sendMail({
+    console.log('Tentando enviar email de confirmação para:', data.user_email);
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: data.user_email,
       subject: "Pagamento Confirmado - DayLove",
       html: getPaymentSuccessTemplate(data),
     });
+    console.log('Email de confirmação enviado:', info.response);
     return true;
   } catch (error) {
     console.error("Erro ao enviar email de confirmação:", error);
@@ -96,12 +112,14 @@ export async function sendPageCreatedEmail(data: FormData) {
   if (!data.user_email) return;
 
   try {
-    await transporter.sendMail({
+    console.log('Tentando enviar email de página criada para:', data.user_email);
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: data.user_email,
       subject: "Sua Página foi Criada - DayLove",
       html: getPageCreatedTemplate(data),
     });
+    console.log('Email de página criada enviado:', info.response);
     return true;
   } catch (error) {
     console.error("Erro ao enviar email de página criada:", error);

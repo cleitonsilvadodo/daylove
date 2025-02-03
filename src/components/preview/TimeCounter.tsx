@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { differenceInSeconds } from "date-fns";
+import { differenceInSeconds, parseISO } from "date-fns";
 
 interface TimeCounterProps {
   startDate: string;
@@ -19,11 +19,26 @@ export default function TimeCounter({ startDate }: TimeCounterProps) {
 
   React.useEffect(() => {
     const updateCounter = () => {
-      const start = new Date(startDate);
+      if (!startDate || isNaN(new Date(startDate).getTime())) {
+        console.error("Data de início inválida:", startDate);
+        return;
+      }
+
+      const start = parseISO(startDate);
       const now = new Date();
 
       // Se a data inicial for futura, não calcula
-      if (now < start) return;
+      if (now < start) {
+        setTimeElapsed({
+          years: 0,
+          months: 0,
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+        });
+        return;
+      }
 
       // Calcula a diferença total em segundos
       const totalSeconds = differenceInSeconds(now, start);

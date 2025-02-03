@@ -105,6 +105,8 @@ export interface PagarmeWebhook {
     status: OrderStatus;
     created_at: string;
     updated_at: string;
+    customer?: PagarmeCustomer;
+    metadata?: Record<string, any>;
   };
 }
 

@@ -4,13 +4,18 @@ import { FormData, MusicType } from "@/types/form";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+console.log("Inicializando Supabase com URL:", supabaseUrl);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false
+  }
+});
 
 export interface PageRecord {
   id: string;
   title: string;
-  startDate: string;
-  dateDisplayMode: string;
+  start_date: string;
+  date_display_mode: string;
   message: string;
   photos: string[];
   music: {
@@ -85,27 +90,61 @@ export async function getPageById(id: string): Promise<PageRecord | null> {
 
 export async function createPage(formData: FormData): Promise<PageRecord | null> {
   try {
+    console.log("Criando página com dados:", formData);
+    
+    // Mapeia os campos para corresponder ao schema do banco
+    const pageData = {
+      title: formData.title,
+      message: formData.message,
+      start_date: formData.startDate,
+      date_display_mode: formData.dateDisplayMode,
+      animation: formData.animation,
+      photos: formData.photos || [],
+      music: formData.music || { url: "", title: "" },
+      status: "draft",
+    };
+
+    console.log("Dados formatados para inserção:", pageData);
+
+    // Primeiro, verifica se a conexão está funcionando
+    const { data: testData, error: testError } = await supabase
+      .from("pages")
+      .select("count")
+      .limit(1);
+
+    if (testError) {
+      console.error("Erro ao testar conexão com Supabase:", testError);
+      throw new Error("Falha na conexão com Supabase");
+    }
+
+    console.log("Conexão com Supabase OK, prosseguindo com inserção");
+
     const { data, error } = await supabase
       .from("pages")
-      .insert([
-        {
-          title: formData.title,
-          message: formData.message,
-          start_date: formData.startDate,
-          date_display_mode: formData.dateDisplayMode,
-          animation: formData.animation,
-          photos: formData.photos,
-          music: formData.music,
-          status: "draft",
-        },
-      ])
+      .insert([pageData])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro do Supabase ao criar página:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw error;
+    }
+    
+    console.log("Página criada com sucesso:", data);
     return data;
-  } catch (error) {
-    console.error("Erro ao criar página:", error);
+  } catch (error: any) {
+    console.error("Erro ao criar página:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      stack: error.stack
+    });
     return null;
   }
 }

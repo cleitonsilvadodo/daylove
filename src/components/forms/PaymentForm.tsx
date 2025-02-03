@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FormData } from "@/types/form";
 import { PaymentResponse, PlanType, PaymentMethod } from "@/types/payment";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 interface PaymentFormProps {
   formData: FormData;
@@ -104,6 +105,7 @@ export default function PaymentForm({
   formData,
   onPrevStep,
 }: PaymentFormProps) {
+  const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState(PLANS[0]);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("credit_card");
   const [loading, setLoading] = useState(false);
@@ -121,11 +123,39 @@ export default function PaymentForm({
     cvv: "",
   });
   const [pixData, setPixData] = useState<PixData>();
+  const [qrCodeImage, setQrCodeImage] = useState<string>();
+
+  // Gerar QR code quando o pixData for atualizado
+  useEffect(() => {
+    async function generateQRCode() {
+      if (pixData?.pix_key) {
+        try {
+          const response = await fetch("/api/generate-qrcode", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ text: pixData.pix_key }),
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            setQrCodeImage(data.qrCodeDataUrl);
+          }
+        } catch (error) {
+          console.error("Erro ao gerar QR code:", error);
+        }
+      }
+    }
+
+    generateQRCode();
+  }, [pixData?.pix_key]);
 
   const handlePayment = async () => {
     try {
       setLoading(true);
       setPixData(undefined);
+      setQrCodeImage(undefined);
 
       const paymentData: any = {
         formData,
@@ -168,8 +198,20 @@ export default function PaymentForm({
             pix_key: data.pix_key,
             expires_at: data.expires_at,
           });
+
+          // Construir URL com parâmetros do PIX
+          const params = new URLSearchParams({
+            qr_code: data.qr_code || '',
+            pix_key: data.pix_key || '',
+            expires_at: data.expires_at || '',
+          });
+
+          // Redirecionar para página de pendente com dados do PIX
+          router.push(`/payment/pending?${params.toString()}`);
         } else if (data.init_point) {
           window.open(data.init_point, '_blank');
+          // Redirecionar para página de sucesso imediatamente para cartão
+          router.push('/payment/success');
         }
       } else {
         console.error("Erro na API:", data);
@@ -400,35 +442,6 @@ export default function PaymentForm({
                 required
               />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* QR Code do PIX */}
-      {pixData?.qr_code && (
-        <div className="bg-[#1A1A1A] p-6 rounded-lg mb-8 text-center">
-          <h3 className="text-xl font-bold text-white mb-4">Pagamento via PIX</h3>
-          <div className="flex flex-col items-center gap-4">
-            <Image
-              src={`data:image/png;base64,${pixData.qr_code}`}
-              alt="QR Code PIX"
-              width={200}
-              height={200}
-              className="bg-white p-2 rounded-lg"
-            />
-            {pixData.pix_key && (
-              <div className="max-w-sm">
-                <p className="text-white/60 mb-2">Ou copie a chave PIX:</p>
-                <div className="bg-white/10 p-2 rounded break-all">
-                  <code className="text-white">{pixData.pix_key}</code>
-                </div>
-              </div>
-            )}
-            {pixData.expires_at && (
-              <p className="text-white/60">
-                Expira em: {new Date(pixData.expires_at).toLocaleString()}
-              </p>
-            )}
           </div>
         </div>
       )}

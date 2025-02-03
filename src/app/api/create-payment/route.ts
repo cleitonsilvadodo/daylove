@@ -97,13 +97,23 @@ export async function POST(request: Request) {
 
     // Retornar dados específicos dependendo do método de pagamento
     if (body.paymentMethod === "pix") {
+      const pixData = data.charges[0]?.last_transaction;
+      if (!pixData?.qr_code) {
+        console.error("QR Code do PIX não encontrado na resposta:", pixData);
+        return NextResponse.json(
+          { success: false, error: "QR Code do PIX não gerado" },
+          { status: 500 }
+        );
+      }
+
+      // Garantir que todos os dados do PIX estão presentes
       return NextResponse.json({
         success: true,
         preferenceId: data.id,
-        qr_code: data.charges[0]?.last_transaction?.qr_code,
-        qr_code_url: data.charges[0]?.last_transaction?.qr_code_url,
-        pix_key: data.charges[0]?.last_transaction?.pix_key,
-        expires_at: data.charges[0]?.last_transaction?.expires_at,
+        qr_code: pixData.qr_code,
+        qr_code_url: pixData.qr_code_url,
+        pix_key: pixData.pix_key || pixData.qr_code, // Fallback para o QR code se a chave não estiver presente
+        expires_at: pixData.expires_at,
       });
     }
 

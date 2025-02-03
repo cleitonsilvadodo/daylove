@@ -3,6 +3,7 @@ import { handleSuccessfulPayment } from "@/services/pages";
 import { FormData } from "@/types/form";
 import { PagarmeWebhook, PagarmeOrder, OrderStatus } from "@/types/pagarme";
 import crypto from 'crypto';
+import { sendPaymentConfirmationEmail } from "@/services/email";
 
 const verifySignature = (body: string, signature: string): boolean => {
   const hash = crypto.createHmac('sha256', process.env.PAGARME_SECRET_KEY || '')
@@ -94,6 +95,22 @@ export async function POST(request: Request) {
       const formData = JSON.parse(metadata.formData) as FormData;
       console.log("Form data:", formData);
 
+      // Adicionar email do cliente aos dados do formulário
+      formData.user_email = order.customer?.email || '';
+
+      // Primeiro enviar email de confirmação de pagamento
+      console.log("Enviando email de confirmação de pagamento...");
+      const emailSent = await sendPaymentConfirmationEmail({
+        ...formData,
+        payment_id: order.id,
+      });
+
+      if (!emailSent) {
+        console.error("Falha ao enviar email de confirmação de pagamento");
+      }
+
+      // Depois processar o pagamento e criar a página
+      console.log("Processando pagamento e criando página...");
       const success = await handleSuccessfulPayment(
         order.id,
         order.customer?.email || '',

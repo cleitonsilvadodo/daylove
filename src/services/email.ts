@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer";
 import { FormData } from "@/types/form";
-import QRCode from "qrcode";
 
 // Configuração do transportador de email
 const transporter = nodemailer.createTransport({
@@ -85,16 +84,9 @@ const getPaymentSuccessTemplate = (data: FormData) => `
 
 // Template para email de página criada
 const getPageCreatedTemplate = async (data: FormData) => {
-  // Gerar QR code para o link da página
+  // Gerar URL para o QR code usando goqr.me
   const pageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/pages/${data.payment_id}`;
-  const qrCodeDataUrl = await QRCode.toDataURL(pageUrl, {
-    width: 300,
-    margin: 2,
-    color: {
-      dark: "#000000",
-      light: "#FFFFFF",
-    },
-  });
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pageUrl)}`;
 
   return `
 <!DOCTYPE html>
@@ -159,7 +151,7 @@ const getPageCreatedTemplate = async (data: FormData) => {
         Escaneie o QR code abaixo para acessar sua página ou imprima para compartilhar com quem você ama ❤️
       </p>
       <img 
-        src="${qrCodeDataUrl}"
+        src="${qrCodeUrl}"
         alt="QR Code da sua página"
         class="qrcode"
       />

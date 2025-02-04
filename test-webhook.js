@@ -46,7 +46,7 @@ const testWebhook = async (planType = "forever", musicUrl = "") => {
       title: "Teste de Página",
       startDate: "2024-02-02",
       message: "Teste de mensagem",
-      user_email: "cleitomdodopago@gmail.com",
+      user_email: "cleitomdodopag@gmail.com",
       photos,
       music,
       animation: planType === "forever" ? "hearts" : "none",
@@ -74,7 +74,7 @@ const testWebhook = async (planType = "forever", musicUrl = "") => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         customer: {
-          email: "cleitomdodopago@gmail.com",
+          email: "cleitomdodopag@gmail.com",
           name: "Cliente Teste",
           type: "individual",
           document: "12345678900"
@@ -91,7 +91,7 @@ const testWebhook = async (planType = "forever", musicUrl = "") => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           customer: {
-            email: "cleitomdodopago@gmail.com",
+            email: "cleitomdodopag@gmail.com",
             name: "Cliente Teste",
             type: "individual",
             document: "12345678900"
@@ -171,8 +171,8 @@ Uso:
   node test-webhook.js annual
 
   Plano para sempre (8 fotos + música):
-  node test-webhook.js forever "https://youtube.com/watch?v=123"
-  node test-webhook.js forever "https://open.spotify.com/track/123"
+  node test-webhook.js forever "https://www.youtube.com/watch?v=mW8o_WDL91o"
+  node test-webhook.js forever "https://www.youtube.com/watch?v=mW8o_WDL91o"
 `);
 
 testWebhook(planType || "forever", musicUrl);

@@ -166,12 +166,12 @@ export default function Page({ params }: PageProps) {
 
             {/* Data e Contagem */}
             {pageData.start_date && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <p className="text-white/60">Compartilhando momentos há</p>
+              <div className="space-y-4">
+                <p className="text-white/60">Compartilhando momentos há</p>
+                <div className="max-w-2xl mx-auto">
                   <TimeCounter startDate={pageData.start_date} />
                 </div>
-                <div className="text-white/80">
+                <div className="text-white/80 mt-4">
                   <span className="text-white/60 mr-2">Desde</span>
                   {formatDate(pageData.start_date, pageData.date_display_mode)}
                 </div>
@@ -180,8 +180,8 @@ export default function Page({ params }: PageProps) {
 
             {/* Player de música */}
             {showMusic && pageData.music.url && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                <MusicPlayer music={pageData.music} />
+              <div className="mt-12 w-full max-w-sm mx-auto">
+                <MusicPlayer music={pageData.music} autoPlay={true} />
               </div>
             )}
           </div>

@@ -5,7 +5,7 @@ const testEmail = async () => {
     const payload = {
       type: 'payment',
       data: {
-        user_email: 'cleitomdodopago@gmail.com',
+        user_email: 'cleitomdodopag@gmail.com',
         title: 'Teste de Página',
         startDate: '2024-02-02',
         plan: {
@@ -18,7 +18,7 @@ const testEmail = async () => {
 
     console.log('Payload:', JSON.stringify(payload, null, 2));
 
-    const response = await fetch('http://localhost:3000/api/send-email', {
+    const response = await fetch('http://localhost:3001/api/send-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

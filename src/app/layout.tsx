@@ -1,6 +1,5 @@
 import "@/styles/globals.css";
 import { Metadata } from "next";
-import PromotionBanner from "@/components/shared/PromotionBanner";
 
 export const metadata: Metadata = {
   title: "DayLove - Crie sua página de amor",
@@ -20,12 +19,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen bg-[#111111]">
-        <div className="fixed top-0 left-0 right-0 z-50">
-          <PromotionBanner />
-        </div>
-        <div className="pt-12">
-          {children}
-        </div>
+        {children}
       </body>
     </html>
   );

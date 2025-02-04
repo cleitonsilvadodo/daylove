@@ -124,7 +124,7 @@ export default function Preview({ formData }: PreviewProps) {
 
         {/* Player de música */}
         {formData.music.url && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+          <div className="mt-12 w-full max-w-sm mx-auto">
             <MusicPlayer music={formData.music} />
           </div>
         )}

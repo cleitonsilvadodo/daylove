@@ -16,7 +16,7 @@ const PLANS = [
   {
     type: "forever" as PlanType,
     title: "Para sempre",
-    price: 29.90,
+    price: 1.00, // Alterado para teste
     oldPrice: 62.00,
     period: "/uma vez",
     features: [
@@ -32,7 +32,7 @@ const PLANS = [
   {
     type: "annual" as PlanType,
     title: "Anual",
-    price: 19.90,
+    price: 1.00, // Alterado para teste
     oldPrice: 42.00,
     period: "/por ano",
     features: [

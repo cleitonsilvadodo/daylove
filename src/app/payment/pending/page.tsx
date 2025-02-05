@@ -1,11 +1,25 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import AnimatedLogo from "@/components/shared/AnimatedLogo";
 
-export default function PendingPage() {
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
+function LoadingComponent() {
+  return (
+    <div className="min-h-screen bg-[#111111] flex items-center justify-center">
+      <div className="text-white text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 mx-auto mb-4"></div>
+        <p>Carregando...</p>
+      </div>
+    </div>
+  );
+}
+
+function PendingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [timeLeft, setTimeLeft] = useState<string>("");
@@ -204,5 +218,13 @@ export default function PendingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PendingPage() {
+  return (
+    <Suspense fallback={<LoadingComponent />}>
+      <PendingContent />
+    </Suspense>
   );
 }

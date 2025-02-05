@@ -1,32 +1,5 @@
-export interface PaymentResponse {
-  success: boolean;
-  preferenceId?: string;
-  init_point?: string;
-  error?: string;
-  details?: any;
-  qr_code?: string;
-  qr_code_url?: string;
-  pix_key?: string;
-  expires_at?: string;
-}
-
-export type PlanType = "forever" | "annual";
 export type PaymentMethod = "credit_card" | "pix";
-
-export interface Plan {
-  type: PlanType;
-  title: string;
-  price: number;
-  period: string;
-  features: string[];
-}
-
-export interface CustomerData {
-  name: string;
-  email: string;
-  document_number: string;
-  phone_numbers: string[];
-}
+export type PlanType = "forever" | "annual";
 
 export interface CardData {
   number: string;
@@ -36,11 +9,32 @@ export interface CardData {
   cvv: string;
 }
 
+export interface CustomerData {
+  name: string;
+  email: string;
+  document_number: string;
+  phone_numbers: string[];
+}
+
 export interface CreatePaymentRequest {
   formData: any;
   planType: PlanType;
   planPrice: number;
-  customer: CustomerData;
   paymentMethod: PaymentMethod;
+  customer: CustomerData;
   card?: CardData;
+}
+
+export interface PaymentResponse {
+  success: boolean;
+  error?: string;
+  order?: {
+    id: string;
+  };
+  preferenceId?: string;
+  qr_code?: string;
+  qr_code_url?: string;
+  pix_key?: string;
+  expires_at?: string;
+  init_point?: string;
 }

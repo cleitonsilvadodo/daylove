@@ -1,7 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { getPageById, PageRecord } from "@/lib/supabase";
+import SurpriseReveal from "@/components/shared/SurpriseReveal";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatDate } from "@/utils/date";
 import BackgroundAnimation from "@/components/preview/BackgroundAnimation";
 import MusicPlayer from "@/components/preview/MusicPlayer";
@@ -18,6 +20,7 @@ export default function Page({ params }: PageProps) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = React.useState(0);
+  const [isRevealed, setIsRevealed] = useState(false);
 
   React.useEffect(() => {
     async function loadPage() {
@@ -95,98 +98,117 @@ export default function Page({ params }: PageProps) {
   const hasMultiplePhotos = pageData.photos && pageData.photos.length > 1;
 
   return (
-    <div className="min-h-screen bg-[#111111] py-8">
-      <div className="container mx-auto px-4">
-        <div className="relative w-full min-h-[400px] bg-[#111111] rounded-lg overflow-hidden">
-          {/* Animação de fundo */}
-          {showAnimation && <BackgroundAnimation type={pageData.animation} />}
+    <>
+      <AnimatePresence>
+        {!isRevealed && (
+          <SurpriseReveal onReveal={() => setIsRevealed(true)} />
+        )}
+      </AnimatePresence>
 
-          {/* Conteúdo */}
-          <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 text-center">
-            {/* Foto com carrossel */}
-            {pageData.photos && pageData.photos.length > 0 && (
-              <div className="relative w-64 h-64 mb-8 rounded-lg overflow-hidden group">
-                <img
-                  src={pageData.photos[currentPhotoIndex]}
-                  alt={`Foto ${currentPhotoIndex + 1}`}
-                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-                />
-                
-                {/* Botões de navegação (visíveis apenas quando hover e mais de uma foto) */}
-                {hasMultiplePhotos && (
-                  <>
-                    <button
-                      onClick={prevPhoto}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={nextPhoto}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    >
-                      →
-                    </button>
-                  </>
-                )}
+      <AnimatePresence mode="wait">
+        {isRevealed && (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="min-h-screen bg-[#111111] py-8"
+          >
+        <div className="container mx-auto px-4">
+          <div className="relative w-full min-h-[400px] bg-[#111111] rounded-lg overflow-hidden">
+            {/* Animação de fundo */}
+            {showAnimation && <BackgroundAnimation type={pageData.animation} />}
 
-                {/* Indicadores de foto */}
-                {hasMultiplePhotos && (
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                    {pageData.photos.map((_, index) => (
-                      <div
-                        key={index}
-                        className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                          index === currentPhotoIndex ? "bg-white" : "bg-white/50"
-                        }`}
-                      />
-                    ))}
+            {/* Conteúdo */}
+            <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-8 text-center">
+              {/* Foto com carrossel */}
+              {pageData.photos && pageData.photos.length > 0 && (
+                <div className="relative w-64 h-64 mb-8 rounded-lg overflow-hidden group">
+                  <img
+                    src={pageData.photos[currentPhotoIndex]}
+                    alt={`Foto ${currentPhotoIndex + 1}`}
+                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+                  />
+                  
+                  {/* Botões de navegação (visíveis apenas quando hover e mais de uma foto) */}
+                  {hasMultiplePhotos && (
+                    <>
+                      <button
+                        onClick={prevPhoto}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      >
+                        ←
+                      </button>
+                      <button
+                        onClick={nextPhoto}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      >
+                        →
+                      </button>
+                    </>
+                  )}
+
+                  {/* Indicadores de foto */}
+                  {hasMultiplePhotos && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                      {pageData.photos.map((_, index) => (
+                        <div
+                          key={index}
+                          className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                            index === currentPhotoIndex ? "bg-white" : "bg-white/50"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Título */}
+              <h1 
+                className="text-4xl font-bold mb-6"
+                style={{ 
+                  fontFamily: "'Dancing Script', cursive",
+                  color: "#ef4444"
+                }}
+              >
+                {pageData.title || "Nosso Amor"}
+              </h1>
+
+              {/* Mensagem */}
+              {pageData.message && (
+                <div className="max-w-md text-white/60 mb-8 whitespace-pre-line">
+                  {pageData.message}
+                </div>
+              )}
+
+              {/* Data e Contagem */}
+              {pageData.start_date && (
+                <div className="space-y-4">
+                  <p className="text-white/60">Compartilhando momentos há</p>
+                  <div className="max-w-2xl mx-auto">
+                    <TimeCounter startDate={pageData.start_date} />
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Título */}
-            <h1 
-              className="text-4xl font-bold mb-6"
-              style={{ 
-                fontFamily: "'Dancing Script', cursive",
-                color: "#ef4444"
-              }}
-            >
-              {pageData.title || "Nosso Amor"}
-            </h1>
-
-            {/* Mensagem */}
-            {pageData.message && (
-              <div className="max-w-md text-white/60 mb-8 whitespace-pre-line">
-                {pageData.message}
-              </div>
-            )}
-
-            {/* Data e Contagem */}
-            {pageData.start_date && (
-              <div className="space-y-4">
-                <p className="text-white/60">Compartilhando momentos há</p>
-                <div className="max-w-2xl mx-auto">
-                  <TimeCounter startDate={pageData.start_date} />
+                  <div className="text-white/80 mt-4">
+                    <span className="text-white/60 mr-2">Desde</span>
+                    {formatDate(pageData.start_date, pageData.date_display_mode)}
+                  </div>
                 </div>
-                <div className="text-white/80 mt-4">
-                  <span className="text-white/60 mr-2">Desde</span>
-                  {formatDate(pageData.start_date, pageData.date_display_mode)}
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Player de música */}
-            {showMusic && pageData.music.url && (
-              <div className="mt-12 w-full max-w-sm mx-auto">
-                <MusicPlayer music={pageData.music} autoPlay={true} />
-              </div>
-            )}
+              {/* Player de música */}
+              {showMusic && pageData.music.url && (
+                <div className="mt-12 w-full max-w-sm mx-auto">
+                  <MusicPlayer music={pageData.music} autoPlay={true} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

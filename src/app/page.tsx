@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { FormData, initialFormData } from "@/types/form";
+import PromotionBanner from "@/components/shared/PromotionBanner";
 import TitleForm from "@/components/forms/TitleForm";
 import StartDateForm from "@/components/forms/StartDateForm";
 import MessageForm from "@/components/forms/MessageForm";
@@ -144,7 +145,11 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#111111] py-8">
+    <>
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <PromotionBanner />
+      </div>
+      <main className="min-h-screen bg-[#111111] pt-16 pb-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Formulário */}
@@ -157,5 +162,6 @@ export default function Home() {
         </div>
       </div>
     </main>
+    </>
   );
 }

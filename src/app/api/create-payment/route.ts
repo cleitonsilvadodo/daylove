@@ -110,6 +110,9 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         preferenceId: data.id,
+        order: {
+          id: data.id
+        },
         qr_code: pixData.qr_code,
         qr_code_url: pixData.qr_code_url,
         pix_key: pixData.pix_key || pixData.qr_code, // Fallback para o QR code se a chave não estiver presente
@@ -120,6 +123,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       preferenceId: data.id,
+      order: {
+        id: data.id
+      },
       init_point: data.charges[0]?.last_transaction?.url,
     });
   } catch (error: any) {

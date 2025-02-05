@@ -5,11 +5,32 @@ import { PagarmeWebhook, PagarmeOrder, OrderStatus } from "@/types/pagarme";
 import crypto from 'crypto';
 import { sendPaymentConfirmationEmail } from "@/services/email";
 
-const verifySignature = (body: string, signature: string): boolean => {
-  const hash = crypto.createHmac('sha256', process.env.PAGARME_SECRET_KEY || '')
+const verifySignature = (body: string, signature: string | null): boolean => {
+  if (!signature) {
+    console.error("Assinatura não fornecida");
+    return false;
+  }
+
+  if (!process.env.PAGARME_SECRET_KEY) {
+    console.error("PAGARME_SECRET_KEY não configurada");
+    return false;
+  }
+
+  // Remove o prefixo "sha256=" se existir
+  const signatureValue = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+
+  const hash = crypto.createHmac('sha256', process.env.PAGARME_SECRET_KEY)
     .update(body)
     .digest('hex');
-  return hash === signature;
+
+  const isValid = hash === signatureValue;
+  console.log("Verificação de assinatura:", {
+    receivedSignature: signatureValue,
+    calculatedHash: hash,
+    isValid
+  });
+
+  return isValid;
 };
 
 // Adiciona método GET para teste
@@ -21,29 +42,32 @@ export async function POST(request: Request) {
   try {
     console.log("Recebendo webhook do Pagar.me...");
     const body = await request.text();
-    const signature = request.headers.get('X-Hub-Signature');
+    // Tentar diferentes headers de assinatura
+    const signature = request.headers.get('X-Hub-Signature') || 
+                     request.headers.get('x-hub-signature') ||
+                     request.headers.get('x-signature') ||
+                     request.headers.get('signature');
 
     console.log("Headers recebidos:", {
       signature,
-      contentType: request.headers.get('Content-Type')
+      contentType: request.headers.get('Content-Type'),
+      allHeaders: Object.fromEntries(request.headers.entries())
     });
 
-    // Em produção, vamos logar mais informações para debug
-    console.log("Ambiente:", process.env.NODE_ENV);
-    console.log("PAGARME_SECRET_KEY:", process.env.PAGARME_SECRET_KEY ? "Configurada" : "Não configurada");
-    console.log("Body completo:", body);
+    // Em desenvolvimento, pular verificação de assinatura
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Ambiente de desenvolvimento: pulando verificação de assinatura");
+    } else if (!signature || !verifySignature(body, signature)) {
+      console.error("Assinatura do webhook inválida");
+      console.error("Signature recebida:", signature);
+      console.error("Body recebido (primeiros 200 caracteres):", body.substring(0, 200));
+      return NextResponse.json(
+        { success: false, error: "Assinatura inválida" },
+        { status: 401 }
+      );
+    }
 
-    // Remover temporariamente a verificação de assinatura para teste
-    // if (!signature || !verifySignature(body, signature)) {
-    //   console.error("Assinatura do webhook inválida");
-    //   console.error("Signature recebida:", signature);
-    //   return NextResponse.json(
-    //     { success: false, error: "Assinatura inválida" },
-    //     { status: 401 }
-    //   );
-    // }
-
-    console.log("Parseando webhook data...");
+    console.log("Body recebido:", body.substring(0, 200) + "...");
     const webhookData = JSON.parse(body) as PagarmeWebhook;
     
     if (!webhookData.data || !webhookData.data.id) {
@@ -54,22 +78,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sempre usar os dados do webhook em produção por enquanto
-    console.log("Usando dados do webhook diretamente");
-    const order = webhookData.data as PagarmeOrder;
+    // Em desenvolvimento, não verifica o pedido na API do Pagar.me
+    let order: PagarmeOrder;
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Ambiente de desenvolvimento, usando dados do webhook");
+      order = webhookData.data as PagarmeOrder;
+    } else {
+      const apiKey = process.env.PAGARME_SECRET_KEY;
+      if (!apiKey) {
+        console.error("Chave da API do Pagar.me não encontrada");
+        return NextResponse.json(
+          { success: false, error: "Configuração inválida" },
+          { status: 500 }
+        );
+      }
+
+      const response = await fetch(`https://api.pagar.me/core/v5/orders/${webhookData.data.id}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Erro ao buscar pedido:", errorText);
+        return NextResponse.json(
+          { success: false, error: "Erro ao buscar pedido" },
+          { status: response.status }
+        );
+      }
+
+      order = await response.json() as PagarmeOrder;
+    }
 
     console.log("Processando pedido:", order.id);
     const charge = order.charges?.[0];
-    
-    // Logar mais informações do pedido
-    console.log("Detalhes do pedido:", {
-      orderId: order.id,
-      status: charge?.status,
-      customer: order.customer,
-      metadata: order.metadata,
-      charges: order.charges
-    });
-
     if (charge?.status === "paid") {
       console.log("Pagamento aprovado, processando...");
       const metadata = order.metadata as {
@@ -131,12 +175,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Erro ao processar webhook:", error);
-    if (error instanceof Error) {
-      console.error("Detalhes do erro:", {
-        message: error.message,
-        stack: error.stack
-      });
-    }
     return NextResponse.json(
       { error: "Erro ao processar webhook" },
       { status: 500 }
